@@ -22,12 +22,19 @@ class UserController extends Controller
             'username' => 'required|string|max:255|unique:users',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'document' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
         ]);
+
+        $filePath = null;
+        if ($request->hasFile('document')) {
+            $filePath = $request->file('document')->store('documents', 'public');
+        }
 
         $user = \App\Models\User::create([
             'username' => $validatedData['username'],
             'email' => $validatedData['email'],
             'password' => bcrypt($validatedData['password']),
+            'file_path' => $filePath,
         ]);
 
         Auth::login($user);
@@ -65,5 +72,20 @@ class UserController extends Controller
     public function profile()
     {
         return view('Auth.profile');
+    }
+
+    public function uploadDocument(Request $request)
+    {
+        $request->validate([
+            'document' => 'required|file|mimes:pdf,doc,docx|max:2048',
+        ]);
+
+        $path = $request->file('document')->store('documents', 'public');
+
+        Auth::user()->update([
+            'file_path' => $path,
+        ]);
+
+        return back()->with('success', 'Document uploaded successfully!');
     }
 }

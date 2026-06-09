@@ -15,7 +15,12 @@ Route::get('/contact-us', function () {
     return view('contact');
 })->name('contact');
 
-Route::get('/post_job', [JoblistController::class, 'job']);
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->name('dashboard')->middleware('auth');
+
+Route::get('/post_job', [JoblistController::class, 'job'])->middleware('auth');
+Route::post('/post_job', [JoblistController::class, 'store'])->name('post_job.store')->middleware('auth');
 
 Route::get('/Auth/register', [UserController::class, 'register'])->name('register');
 Route::get('/Auth/login', [UserController::class, 'login'])->name('login');
@@ -23,7 +28,9 @@ Route::redirect('/register', '/Auth/register');
 Route::redirect('/login', '/Auth/login');
 Route::get('/profile', [UserController::class, 'profile'])->middleware('auth')->name('profile');
 Route::get('/jobs', [JoblistController::class, 'index'])->name('jobs');
+Route::get('/jobs/{id}', [JoblistController::class, 'show'])->name('jobs.show');
 Route::post('/post_job', [JoblistController::class, 'store'])->name('post_job.store');
+Route::post('/upload', [UserController::class, 'uploadDocument'])->middleware('auth')->name('upload.document');
 
 Route::post('/Auth/register', [UserController::class, 'store'])->name('register.store');
 Route::post('/Auth/login', [UserController::class, 'authenticate'])->name('login.validate');

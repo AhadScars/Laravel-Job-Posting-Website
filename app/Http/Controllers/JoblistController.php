@@ -3,43 +3,69 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Joblist;
 
 class JoblistController extends Controller
 {
-     public function index(Request $request)
-{
-    $search = $request->search;
+    protected function authorizeAdmin()
+    {
+        if (!Auth::check() || !Auth::user()->is_admin) {
+            return redirect('/')->with('error', 'Only admins can post jobs.');
+        }
 
-    $jobs = Joblist::when($search, function ($query, $search) {
+        return null;
+    }
+
+    public function index(Request $request)
+    {
+        $search = $request->search;
+
+        $jobs = Joblist::when($search, function ($query, $search) {
             $query->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('company', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%")
-                  ->orWhere('salary', 'like', "%{$search}%");
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('company', 'like', "%{$search}%")
+                ->orWhere('location', 'like', "%{$search}%")
+                ->orWhere('salary', 'like', "%{$search}%");
         })
-        ->latest()
-        ->paginate(6);
-        
+            ->latest()
+            ->paginate(6);
 
-    return view('jobs', compact('jobs', 'search'));
-}
 
-public function job(){
-    return view('/post_job');
-}
+        return view('jobs', compact('jobs', 'search'));
+    }
 
-public function store(Request $request){
-    $request->validate([
-        'title' => 'required',
-        'description' => 'required',
-        'company' => 'required',
-        'location' => 'required',
-        'salary' => 'required|numeric',
-    ]);
+    public function job()
+    {
+        if ($response = $this->authorizeAdmin()) {
+            return $response;
+        }
 
-    Joblist::create($request->all());
+        return view('/post_job');
+    }
 
-    return redirect()->route('jobs')->with('success', 'Job posted successfully!');
-}
+    public function store(Request $request)
+    {
+        if ($response = $this->authorizeAdmin()) {
+            return $response;
+        }
+
+        $request->validate([
+            'title' => 'required',
+            'description' => 'required',
+            'company' => 'required',
+            'location' => 'required',
+            'salary' => 'required|numeric',
+        ]);
+
+        Joblist::create($request->all());
+
+        return redirect()->route('jobs')->with('success', 'Job posted successfully!');
+    }
+
+    public function show($id)
+    {
+        $job = Joblist::findOrFail($id);
+        return view('job_details', compact('job'));
+    }
 }
