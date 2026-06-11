@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppliedJobs;
+use App\Models\Joblist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Joblist;
 
 class JoblistController extends Controller
 {
@@ -63,9 +64,76 @@ class JoblistController extends Controller
         return redirect()->route('jobs')->with('success', 'Job posted successfully!');
     }
 
+    public function edit($id)
+    {
+        if ($response = $this->authorizeAdmin()) {
+            return $response;
+        }
+
+        $job = Joblist::findOrFail($id);
+        return view('editjobdetails', compact('job'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        if ($response = $this->authorizeAdmin()) {
+            return $response;
+        }
+
+        $job = Joblist::findOrFail($id);
+
+        $request->validate([
+            'title' => 'required',
+            'description' => 'required',
+            'company' => 'required',
+            'location' => 'required',
+            'salary' => 'required|numeric',
+        ]);
+
+        $job->update($request->all());
+
+        return redirect()->route('jobs.show', $id)->with('success', 'Job updated successfully!');
+    }
+
+    public function destroy($id)
+    {
+        if ($response = $this->authorizeAdmin()) {
+            return $response;
+        }
+
+        $job = Joblist::findOrFail($id);
+        $job->delete();
+
+        return redirect()->route('jobs')->with('success', 'Job deleted successfully!');
+    }
+
     public function show($id)
     {
         $job = Joblist::findOrFail($id);
         return view('job_details', compact('job'));
+    }
+
+    public function apply($jobId)
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Please login to apply.');
+        }
+
+        $userId = Auth::id();
+
+        $alreadyApplied = AppliedJobs::where('user_id', $userId)
+            ->where('job_id', $jobId)
+            ->exists();
+
+        if ($alreadyApplied) {
+            return redirect()->back()->with('error', 'You have already applied for this job.');
+        }
+
+        AppliedJobs::create([
+            'user_id' => $userId,
+            'job_id' => $jobId
+        ]);
+
+        return redirect()->back()->with('success', 'Applied successfully!');
     }
 }
